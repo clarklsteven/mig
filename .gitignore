@@ -1,3 +1,6 @@
 venv/
 
 *.png
+recipe*.json
+.python-version
+__pycache__/

@@ -2,20 +2,49 @@
 import random
 from function_nodes import (
     Const, X, Y, Radial, Angle,
-    Sin, Cos, Abs, Add, Sub, Mul, Threshold, PolyNProximity
+    Sin, Cos, Abs, Add, Sub, Mul, Threshold, 
+    PolyNProximity, Noise, RelativeNoise, Offset, Starburst
 )
 from layers import Layer
+import numpy as np
 
-TERMINALS = [X, Y, Radial, Angle, Const]
-UNARY = [Sin, Cos, Abs, Threshold]
+TERMINALS = [
+    (X, 1),
+    (Y, 1),
+    (Radial, 1),
+    (Angle, 0.2),
+    (Const, 1.5),
+    (PolyNProximity, 0.7),
+    (Noise, 0.5)
+]
+UNARY = [
+    (Sin, 2), 
+    (Cos, 2),
+    (Abs, 0.5),
+    (Offset, 0.5),
+    (RelativeNoise, 0.5),
+    (Abs, 0.5)
+]
 BINARY = [Add, Sub, Mul]
 
+def choose_terminal():
+    funcs, weights = zip(*TERMINALS)
+    return random.choices(funcs, weights=weights, k=1)[0]
+
+def choose_unary():
+    funcs, weights = zip(*UNARY)
+    return random.choices(funcs, weights=weights, k=1)[0]
+
 def random_terminal():
-    choice = random.choice(TERMINALS)
+    choice = choose_terminal()
     if choice is Const:
         return Const(random.uniform(0.5, 10))
     elif choice in [Radial, Angle]:
-        return choice(cx=0, cy=0)  # could randomise these later
+        return choice(cx=random.uniform(-1, 1), cy=random.uniform(-1, 1))
+    elif choice is Noise:
+        return choice(amplitude=random.uniform(0.01, 0.2))
+    elif choice is PolyNProximity:
+        return random_polynomial_node(max_degree=4)
     else:
         return choice()
 
@@ -33,10 +62,20 @@ def random_function(depth=0, max_depth=4):
         return random_terminal()
 
     elif node_type == 'unary':
-        op = random.choice(UNARY)
+        op = choose_unary()
         operand = random_function(depth + 1, max_depth)
         if op is Threshold:
             return Threshold(operand, threshold=random.uniform(-1, 1))
+        if op in (Sin, Cos):
+            ox = random.uniform(-2.5, 2.5)
+            oy = random.uniform(-1, 1)
+            return Offset(operand, ox=ox, oy=oy)
+        elif op is Offset:
+            ox = random.uniform(-2.5, 2.5)
+            oy = random.uniform(-1, 1)
+            return Offset(operand, ox=ox, oy=oy)
+        elif op is RelativeNoise:
+            return RelativeNoise(operand, amplitude=random.uniform(0.01, 0.05))
         else:
             return op(operand)
 
@@ -52,7 +91,6 @@ def random_layer_stack(
     blend_modes=('add', 'subtract', 'multiply')
 ):
     num_layers = random.randint(min_layers, max_layers)
-    #num_layers = 3
     layers = []
 
     for _ in range(num_layers):
@@ -69,15 +107,68 @@ def random_polynomial_node(max_degree=3, falloff='inverse') -> PolyNProximity:
 
     for power in range(degree + 1):
         if power == 0:  # constant term
-            coeff_range = (-5, 5)
+            coeff_range = (-0.05, 0.05)
         elif power == 1:  # linear term
-            coeff_range = (-3, 3)
+            coeff_range = (-0.03, 0.03)
         elif power == 2:  # quadratic term
-            coeff_range = (-1, 1)
+            coeff_range = (-0.05, 0.05)
         else:  # cubic and higher
-            coeff_range = (-0.25, 0.25)
+            coeff_range = (-0.01, 0.01)
 
         coeffs.append(random.uniform(*coeff_range))
-        print(f"Coefficient for x^{power}: {coeffs[-1]:.2f}")
+        #print(f"Coefficient for x^{power}: {coeffs[-1]:.2f}")
 
-    return PolyNProximity(coefficients=coeffs, falloff=falloff)
+    return PolyNProximity(coefficients=coeffs, falloff=falloff, proximity_scale=random.uniform(0.5, 2.0))
+
+def random_sin():
+    return RelativeNoise(
+        Offset(
+            Sin(Mul(Radial(),Const(random.uniform(0.5,15)))), 
+            ox=random.uniform(-5, 5), oy=random.uniform(-5, 5)
+        ), 
+        amplitude=random.uniform(0.01, 0.1),
+        seed=random.randint(0, 1000))
+
+def random_combiner(fn1, fn2):
+    op = random.choice(BINARY)
+    if op is Add:
+        return Add(fn1, fn2)
+    elif op is Sub:
+        return Sub(fn1, fn2)
+    elif op is Mul:
+        return Mul(fn1, fn2)
+    else:
+        raise ValueError(f"Unknown binary operation: {op}") 
+
+def random_ripples():
+    num_ripples = random.randint(1, 5)
+    print(f"Generating {num_ripples} ripples")
+    fn = random_sin()
+    for _ in range(num_ripples-1):
+        rr = random_sin()
+        fn = random_combiner(fn, rr)
+
+    print (f"Generated ripples function: {fn}")
+    return fn
+
+def random_starburst():
+    return Starburst(
+        n_arms=random.randint(1, 7),
+        phase=random.uniform(0, 2*np.pi),
+        cx=random.uniform(-3, 3),
+        cy=random.uniform(-1, 1),
+        falloff_mode=random.choice(["poly", "exp"]),
+        power=random.uniform(0.3, 3.0),
+        scale=random.uniform(0.2, 1.2),
+    )
+
+def random_starburst_field():
+    num_starbursts = random.randint(1, 5)
+    print(f"Generating {num_starbursts} starbursts")
+    fn = random_starburst()
+    for _ in range(num_starbursts-1):
+        rr = random_starburst()
+        fn = random_combiner(fn, rr)    
+
+    print (f"Generated starburst function: {fn}")
+    return fn

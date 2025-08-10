@@ -1,12 +1,12 @@
 # config.py
 
 # 🎨 Image Settings
-IMAGE_WIDTH = 1200
-IMAGE_HEIGHT = 400
+IMAGE_WIDTH = 600
+IMAGE_HEIGHT = 200
 
 # 🖼 Coordinate Ranges
-X_MIN = -3.0
-X_MAX = 3.0
+X_MIN = -5.0
+X_MAX = 5.0
 Y_MIN = -1.0
 Y_MAX = 1.0
 

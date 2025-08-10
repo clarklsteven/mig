@@ -2,7 +2,7 @@
 
 from image_generator import generate_image
 import numpy as np
-from config import X_MIN, X_MAX, Y_MIN, Y_MAX
+from config import X_MIN, X_MAX, Y_MIN, Y_MAX, IMAGE_WIDTH, IMAGE_HEIGHT
 
 class Layer:
     def __init__(self, function_node, blend_mode='add', weight=1.0):
@@ -27,7 +27,7 @@ class Layer:
 
         return self.function_node.evaluate(xx, yy)
 
-def blend_layers(layers, width=512, height=512, xlim=(X_MIN, X_MAX), ylim=(Y_MIN, Y_MAX)):
+def blend_layers(layers, width=IMAGE_WIDTH, height=IMAGE_HEIGHT, xlim=(X_MIN, X_MAX), ylim=(Y_MIN, Y_MAX)):
     base = np.zeros((height, width), dtype=float)
 
     for layer in layers:
