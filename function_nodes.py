@@ -23,6 +23,16 @@ class FunctionNode:
         node_cls = NODE_REGISTRY[t]
         return node_cls._from_dict(data)   # each subclass implements _from_dict
 
+    def walk_paths(self, path=()):
+        out = [(path, self)]
+        for child_name, child in self.get_children():
+            out.extend(child.walk_paths(path + (child_name,)))
+        return out
+
+    def get_children(self):
+        """Return a list of (name, child_node) pairs. Override in subclasses."""
+        return []
+
 @register_node
 class Const(FunctionNode):
     def __init__(self, value):
@@ -39,7 +49,6 @@ class Const(FunctionNode):
 
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(d["value"])
 
 @register_node
@@ -49,10 +58,11 @@ class X(FunctionNode):
     
     def __str__(self):
         return "X"
+    
     def to_dict(self): return {"type":"X"}
+
     @classmethod
     def _from_dict(cls, d): 
-        print("Reconstructing", d["type"])
         return cls()
 
 @register_node
@@ -62,10 +72,11 @@ class Y(FunctionNode):
     
     def __str__(self):
         return "Y"
+    
     def to_dict(self): return {"type":"Y"}
+
     @classmethod
     def _from_dict(cls, d): 
-        print("Reconstructing", d["type"])
         return cls()
 
 @register_node
@@ -79,11 +90,12 @@ class Radial(FunctionNode):
 
     def evaluate(self, x, y):
         return np.sqrt((x - self.cx)**2 + (y - self.cy)**2)
+    
     def to_dict(self):
         return {"type":"Radial", "cx": self.cx, "cy": self.cy}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(d.get("cx", 0), d.get("cy", 0))
 
 @register_node
@@ -96,12 +108,16 @@ class Sin(FunctionNode):
 
     def evaluate(self, x, y):
         return np.sin(self.operand.evaluate(x, y))
+    
     def to_dict(self):
         return {"type":"Sin", "operand": self.operand.to_dict()}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["operand"]))
+    
+    def get_children(self):
+        return [("operand", self.operand)]
 
 @register_node
 class Cos(FunctionNode):
@@ -113,12 +129,16 @@ class Cos(FunctionNode):
 
     def evaluate(self, x, y):
         return np.cos(self.operand.evaluate(x, y))
+    
     def to_dict(self):
         return {"type":"Cos", "operand": self.operand.to_dict()}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["operand"]))
+    
+    def get_children(self):
+        return [("operand", self.operand)]
 
 @register_node
 class Mul(FunctionNode):
@@ -135,8 +155,10 @@ class Mul(FunctionNode):
         return {"type":"Mul", "left": self.left.to_dict(), "right": self.right.to_dict()}
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["left"]), FunctionNode.from_dict(d["right"]))
+
+    def get_children(self):
+        return [("left", self.left), ("right", self.right)]
 
 @register_node
 class Add(FunctionNode):
@@ -153,8 +175,10 @@ class Add(FunctionNode):
         return {"type":"Add", "left": self.left.to_dict(), "right": self.right.to_dict()}
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["left"]), FunctionNode.from_dict(d["right"]))
+
+    def get_children(self):
+        return [("left", self.left), ("right", self.right)]
 
 @register_node
 class Sub(FunctionNode):
@@ -171,8 +195,10 @@ class Sub(FunctionNode):
         return {"type":"Sub", "left": self.left.to_dict(), "right": self.right.to_dict()}
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["left"]), FunctionNode.from_dict(d["right"]))
+
+    def get_children(self):
+        return [("left", self.left), ("right", self.right)]
 
 @register_node
 class Abs(FunctionNode):
@@ -184,12 +210,16 @@ class Abs(FunctionNode):
 
     def evaluate(self, x, y):
         return np.abs(self.operand.evaluate(x, y))
+    
     def to_dict(self):
         return {"type":"Abs", "operand": self.operand.to_dict()}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["operand"]))
+    
+    def get_children(self):
+        return [("operand", self.operand)]
 
 @register_node
 class Angle(FunctionNode):
@@ -202,11 +232,12 @@ class Angle(FunctionNode):
 
     def evaluate(self, x, y):
         return np.arctan2(y - self.cy, x - self.cx)
+    
     def to_dict(self):
         return {"type":"Angle", "cx": self.cx, "cy": self.cy}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(d.get("cx", 0), d.get("cy", 0))
 
 @register_node
@@ -220,12 +251,16 @@ class Threshold(FunctionNode):
 
     def evaluate(self, x, y):
         return (self.operand.evaluate(x, y) > self.threshold).astype(float)
+    
     def to_dict(self):
         return {"type":"Threshold", "operand": self.operand.to_dict(), "threshold": self.threshold}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["operand"]), d.get("threshold", 0.5))
+    
+    def get_children(self):
+        return [("operand", self.operand)]
     
 @register_node
 class PolyNProximity(FunctionNode):
@@ -283,7 +318,6 @@ class PolyNProximity(FunctionNode):
         }
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(
             coefficients=[float(c) for c in d["coefficients"]],
             proximity_scale=float(d["proximity_scale"]),
@@ -303,12 +337,16 @@ class Offset(FunctionNode):
 
     def __str__(self):
         return f"Offset({self.fn}, ox={self.ox:.2f}, oy={self.oy:.2f})"
+    
     def to_dict(self):
         return {"type":"Offset","ox":self.ox,"oy":self.oy,"child": self.fn.to_dict()}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["child"]), d["ox"], d["oy"])
+    
+    def get_children(self):
+        return [("child", self.fn)]
     
 @register_node
 class Noise(FunctionNode):
@@ -327,11 +365,12 @@ class Noise(FunctionNode):
 
     def __str__(self):
         return f"Noise(amplitude={self.amplitude}, relative={self.relative})"
+    
     def to_dict(self):
         return {"type":"Noise","amplitude":self.amplitude,"seed":self.seed}
+    
     @classmethod
     def _from_dict(cls, d): 
-        print("Reconstructing", d["type"])
         return cls(d.get("amplitude",0.1), d.get("seed"))
     
 @register_node
@@ -349,12 +388,16 @@ class RelativeNoise(FunctionNode):
     
     def __str__(self):
         return f"RelativeNoise({self.fn}, amplitude={self.amplitude})"
+    
     def to_dict(self):
         return {"type":"RelativeNoise", "fn": self.fn.to_dict(), "amplitude": self.amplitude, "seed": self.seed}
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(FunctionNode.from_dict(d["fn"]), d.get("amplitude", 0.1), d.get("seed"))
+    
+    def get_children(self):
+        return [("fn", self.fn)]
     
 @register_node
 class Starburst(FunctionNode):
@@ -395,6 +438,7 @@ class Starburst(FunctionNode):
         return (f"Starburst(n={self.n_arms}, phase={self.phase:.2f}, "
                 f"cx={self.cx:.2f}, cy={self.cy:.2f}, mode={self.falloff_mode}, "
                 f"power={self.power:.2f}, scale={self.scale:.2f})")
+    
     def to_dict(self):
         return {
             "type": "Starburst",
@@ -406,9 +450,9 @@ class Starburst(FunctionNode):
             "power": self.power,
             "scale": self.scale
         }
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(
             n_arms=d.get("n_arms", 8),
             phase=d.get("phase", 0.0),
@@ -443,6 +487,7 @@ class Twist(FunctionNode):
 
     def __str__(self):
         return f"Twist({self.fn}, amount={self.amount}, power={self.power}, cx={self.cx}, cy={self.cy}, scale={self.scale})"
+    
     def to_dict(self):
         return {
             "type": "Twist",
@@ -453,9 +498,9 @@ class Twist(FunctionNode):
             "cy": self.cy,
             "scale": self.scale
         }
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(
             FunctionNode.from_dict(d["fn"]),
             d.get("amount", 0.6),
@@ -464,6 +509,9 @@ class Twist(FunctionNode):
             d.get("cy", 0.0),
             d.get("scale", 1.0)
         )
+    
+    def get_children(self):
+        return [("fn", self.fn)]
 
 @register_node
 class RadialAmplitude(FunctionNode):
@@ -486,6 +534,7 @@ class RadialAmplitude(FunctionNode):
 
     def __str__(self):
         return f"RadialAmplitude({self.fn}, freq={self.freq}, phase={self.phase}, cx={self.cx}, cy={self.cy}, scale={self.scale}, bias={self.bias})"
+    
     def to_dict(self):
         return {
             "type": "RadialAmplitude",
@@ -497,9 +546,9 @@ class RadialAmplitude(FunctionNode):
             "scale": self.scale,
             "bias": self.bias
         }
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(
             FunctionNode.from_dict(d["fn"]),
             d.get("freq", 8.0),
@@ -509,6 +558,9 @@ class RadialAmplitude(FunctionNode):
             d.get("scale", 1.0),
             d.get("bias", 0.0)
         )
+    
+    def get_children(self):
+        return [("fn", self.fn)]
 
 @register_node
 class PolynomialDistance(FunctionNode):
@@ -537,14 +589,15 @@ class PolynomialDistance(FunctionNode):
     def __str__(self):
         terms = [f"{c:.2f}x^{p}" for p, c in enumerate(reversed(self.coefficients))]
         return f"PolynomialDistance({', '.join(terms)})"
+    
     def to_dict(self):
         return {
             "type": "PolynomialDistance",
             "coefficients": self.coefficients
         }
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(d["coefficients"]) 
 
 @register_node
@@ -570,6 +623,7 @@ class RippleFromDistance(FunctionNode):
 
     def __str__(self):
         return f"RippleFromDistance({self.dist_fn}, freq={self.freq}, phase={self.phase}, mode={self.mode}, power={self.power}, scale={self.scale})"
+    
     def to_dict(self):
         return {
             "type": "RippleFromDistance",
@@ -580,9 +634,9 @@ class RippleFromDistance(FunctionNode):
             "power": self.power,
             "scale": self.scale
         }
+    
     @classmethod
     def _from_dict(cls, d):
-        print("Reconstructing", d["type"])
         return cls(
             FunctionNode.from_dict(d["dist_fn"]),
             d.get("freq", 12.0),
@@ -591,3 +645,6 @@ class RippleFromDistance(FunctionNode):
             d.get("power", 1.5),
             d.get("scale", 0.4)
         )
+    
+    def get_children(self):
+        return [("dist_fn", self.dist_fn)]

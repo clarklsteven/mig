@@ -116,7 +116,6 @@ def random_polynomial_node(max_degree=3, falloff='inverse') -> PolyNProximity:
             coeff_range = (-0.01, 0.01)
 
         coeffs.append(random.uniform(*coeff_range))
-        #print(f"Coefficient for x^{power}: {coeffs[-1]:.2f}")
 
     return PolyNProximity(coefficients=coeffs, falloff=falloff, proximity_scale=random.uniform(0.5, 2.0))
 
@@ -142,13 +141,11 @@ def random_combiner(fn1, fn2):
 
 def random_ripples():
     num_ripples = random.randint(1, 5)
-    print(f"Generating {num_ripples} ripples")
     fn = random_sin()
     for _ in range(num_ripples-1):
         rr = random_sin()
         fn = random_combiner(fn, rr)
 
-    print (f"Generated ripples function: {fn}")
     return fn
 
 def random_starburst():
@@ -164,11 +161,9 @@ def random_starburst():
 
 def random_starburst_field():
     num_starbursts = random.randint(1, 5)
-    print(f"Generating {num_starbursts} starbursts")
     fn = random_starburst()
     for _ in range(num_starbursts-1):
         rr = random_starburst()
         fn = random_combiner(fn, rr)    
 
-    print (f"Generated starburst function: {fn}")
     return fn
